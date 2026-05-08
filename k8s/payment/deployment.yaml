@@ -18,3 +18,6 @@ spec:
           image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-payment:9e429ab6d4ec
           ports:
             - containerPort: 3000
+          env:
+            - name: PORT
+              value: "3004"
