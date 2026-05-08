@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog        # ← ye naam change karo har service ke liye
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalog     # ← ye bhi
+  template:
+    metadata:
+      labels:
+        app: catalog   # ← ye bhi
+    spec:
+      containers:
+        - name: catalog   # ← ye bhi
+          image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-catalog:latest  # ← ye bhi
+          ports:
+            - containerPort: 3000

@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cart        # ← ye naam change karo har service ke liye
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cart     
+  template:
+    metadata:
+      labels:
+        app: cart   
+    spec:
+      containers:
+        - name: cart   
+          image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-cart:latest 
+          ports:
+            - containerPort: 3000

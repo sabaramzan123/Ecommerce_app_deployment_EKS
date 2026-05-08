@@ -25,15 +25,15 @@ jobs:
 
       - name: Check Terraform formatting
         run: terraform fmt -check -recursive
-        working-directory: infra/terraform
+        working-directory: infra/eks
 
       - name: Initialize Terraform without backend
         run: terraform init -backend=false -input=false
-        working-directory: infra/terraform
+        working-directory: infra/eks
 
       - name: Validate Terraform
         run: terraform validate
-        working-directory: infra/terraform
+        working-directory: infra/eks
 
   containers:
     name: Docker Compose And Image Builds

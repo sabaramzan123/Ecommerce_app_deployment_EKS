@@ -191,6 +191,23 @@ jobs:
             exit 1
           fi
 
+      - name: Delete EKS cluster via Terraform
+        shell: bash
+        run: |
+          cat > infra/eks/backend.hcl <<EOF
+          bucket       = "${TF_STATE_BUCKET}"
+          key          = "eks/terraform.tfstate"
+          region       = "${AWS_REGION}"
+          use_lockfile = true
+          EOF
+
+          cd infra/eks
+          terraform init -input=false -backend-config=backend.hcl
+          terraform destroy -auto-approve \
+            -var "aws_region=${AWS_REGION}" \
+            -var "project_name=${PROJECT_NAME}" \
+            -var "cluster_name=${CLUSTER_NAME}"
+
       - name: Summarize destroy result
         shell: bash
         run: |
