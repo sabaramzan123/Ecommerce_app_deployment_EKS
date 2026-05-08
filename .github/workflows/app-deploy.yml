@@ -190,7 +190,20 @@ jobs:
       - name: Apply namespace
         run: kubectl apply -f k8s/namespace.yaml
 
-      - name: Apply all manifests
+      - name: Deploy postgres and redis first
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl apply -f k8s/postgres/deployment.yaml
+          kubectl apply -f k8s/postgres/service.yaml
+          kubectl apply -f k8s/redis/deployment.yaml
+          kubectl apply -f k8s/redis/service.yaml
+          echo "Waiting for postgres to be ready..."
+          kubectl rollout status deployment/postgres -n ecommerce --timeout=120s
+          echo "Waiting for redis to be ready..."
+          kubectl rollout status deployment/redis -n ecommerce --timeout=120s
+
+      - name: Apply all service manifests
         shell: bash
         run: |
           set -euo pipefail
@@ -229,4 +242,5 @@ jobs:
             echo "- Cluster: ${CLUSTER_NAME}"
             echo "- Namespace: ecommerce"
             echo "- Services: frontend, gateway, catalog, cart, order, payment, notification"
+            echo "- Databases: postgres, redis"
           } >> "$GITHUB_STEP_SUMMARY"

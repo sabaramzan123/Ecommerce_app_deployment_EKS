@@ -15,6 +15,19 @@ spec:
     spec:
       containers:
         - name: order
-          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-order:a908d6dd6919
+          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-order:d59f0a1feb61
           ports:
             - containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+            - name: DATABASE_URL
+              value: "postgres://postgres:postgres@postgres.ecommerce.svc.cluster.local:5432/commerce"
+            - name: DB_SCHEMA
+              value: "orders"
+            - name: CART_SERVICE_URL
+              value: "http://cart.ecommerce.svc.cluster.local"
+            - name: PAYMENT_SERVICE_URL
+              value: "http://payment.ecommerce.svc.cluster.local"
+            - name: NOTIFICATION_SERVICE_URL
+              value: "http://notification.ecommerce.svc.cluster.local"

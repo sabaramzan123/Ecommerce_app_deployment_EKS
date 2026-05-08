@@ -15,6 +15,17 @@ spec:
     spec:
       containers:
         - name: gateway
-          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-gateway:a908d6dd6919
+          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-gateway:d59f0a1feb61
           ports:
             - containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+            - name: CATALOG_SERVICE_URL
+              value: "http://catalog.ecommerce.svc.cluster.local"
+            - name: CART_SERVICE_URL
+              value: "http://cart.ecommerce.svc.cluster.local"
+            - name: ORDER_SERVICE_URL
+              value: "http://order.ecommerce.svc.cluster.local"
+            - name: NOTIFICATION_SERVICE_URL
+              value: "http://notification.ecommerce.svc.cluster.local"

@@ -1,21 +1,27 @@
-#deployment.yaml file
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cart       
+  name: cart
   namespace: ecommerce
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: cart     
+      app: cart
   template:
     metadata:
       labels:
-        app: cart   
+        app: cart
     spec:
       containers:
-        - name: cart   
-          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-cart:a908d6dd6919
+        - name: cart
+          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-cart:d59f0a1feb61
           ports:
             - containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+            - name: REDIS_URL
+              value: "redis://redis.ecommerce.svc.cluster.local:6379"
+            - name: CATALOG_SERVICE_URL
+              value: "http://catalog.ecommerce.svc.cluster.local"

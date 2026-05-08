@@ -1,20 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: catalog        # ← ye naam change karo har service ke liye
+  name: catalog
   namespace: ecommerce
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: catalog     # ← ye bhi
+      app: catalog
   template:
     metadata:
       labels:
-        app: catalog   # ← ye bhi
+        app: catalog
     spec:
       containers:
-        - name: catalog   # ← ye bhi
-          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-catalog:a908d6dd6919
+        - name: catalog
+          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-catalog:d59f0a1feb61
           ports:
             - containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+            - name: DATABASE_URL
+              value: "postgres://postgres:postgres@postgres.ecommerce.svc.cluster.local:5432/commerce"
+            - name: DB_SCHEMA
+              value: "catalog"

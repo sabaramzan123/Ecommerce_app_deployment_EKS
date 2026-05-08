@@ -15,6 +15,13 @@ spec:
     spec:
       containers:
         - name: notification
-          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-notification:a908d6dd6919
+          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-notification:d59f0a1feb61
           ports:
             - containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+            - name: DATABASE_URL
+              value: "postgres://postgres:postgres@postgres.ecommerce.svc.cluster.local:5432/commerce"
+            - name: DB_SCHEMA
+              value: "notification"
