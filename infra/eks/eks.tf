@@ -33,6 +33,22 @@ module "eks" {
   cluster_encryption_config  = {}
   cluster_enabled_log_types  = []
 
+  enable_cluster_creator_admin_permissions = true
+
+  access_entries = {
+    github_actions = {
+      principal_arn = "arn:aws:iam::303713699681:role/ECS-deployment-role"
+      policy_associations = {
+        admin = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+  }
+
   eks_managed_node_groups = {
     default = {
       min_size       = 1
