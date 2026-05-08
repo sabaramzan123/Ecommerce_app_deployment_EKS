@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
         - name: catalog   # ← ye bhi
-          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-catalog:a908d6dd6919
+          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-catalog:51aae658bd8f
           ports:
             - containerPort: 3000
