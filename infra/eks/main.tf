@@ -1,3 +1,4 @@
+# EKS cluster provisioned via GitHub Actions
 terraform {
   required_version = ">= 1.3"
 
