@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cart        # ← ye naam change karo har service ke liye
+  name: cart       
   namespace: ecommerce
 spec:
   replicas: 1
