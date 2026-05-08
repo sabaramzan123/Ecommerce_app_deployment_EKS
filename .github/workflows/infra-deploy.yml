@@ -1,0 +1,106 @@
+name: Provision EKS Cluster
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'infra/eks/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  PROJECT_NAME: ${{ vars.PROJECT_NAME || 'eks-commerce' }}
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+  TF_STATE_KEY: ${{ vars.EKS_TF_STATE_KEY || 'eks/terraform.tfstate' }}
+  AWS_ROLE_TO_ASSUME: ${{ vars.AWS_ROLE_TO_ASSUME }}
+  CLUSTER_NAME: ${{ vars.CLUSTER_NAME || 'ecommerce-cluster' }}
+  TF_IN_AUTOMATION: true
+
+concurrency:
+  group: eks-infra-production
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    name: Terraform Apply — EKS Cluster
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.9.0
+          terraform_wrapper: false
+
+      - name: Validate required variables
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -z "${TF_STATE_BUCKET}" ]] && echo "TF_STATE_BUCKET is required." && exit 1
+          [[ -z "${AWS_ROLE_TO_ASSUME}" ]] && echo "AWS_ROLE_TO_ASSUME is required." && exit 1
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+
+      - name: Confirm state bucket exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! aws s3api head-bucket --bucket "${TF_STATE_BUCKET}" 2>/dev/null; then
+            echo "State bucket not found: ${TF_STATE_BUCKET}"
+            echo "Run the Bootstrap Terraform Backend workflow first."
+            exit 1
+          fi
+
+      - name: Render backend config
+        shell: bash
+        run: |
+          cat > infra/eks/backend.hcl <<EOF
+          bucket       = "${TF_STATE_BUCKET}"
+          key          = "${TF_STATE_KEY}"
+          region       = "${AWS_REGION}"
+          use_lockfile = true
+          EOF
+
+      - name: Terraform init
+        run: terraform init -input=false -backend-config=backend.hcl
+        working-directory: infra/eks
+
+      - name: Terraform plan
+        run: |
+          terraform plan \
+            -var "aws_region=${AWS_REGION}" \
+            -var "project_name=${PROJECT_NAME}" \
+            -var "cluster_name=${CLUSTER_NAME}"
+        working-directory: infra/eks
+
+      - name: Terraform apply
+        run: |
+          terraform apply -auto-approve \
+            -var "aws_region=${AWS_REGION}" \
+            -var "project_name=${PROJECT_NAME}" \
+            -var "cluster_name=${CLUSTER_NAME}"
+        working-directory: infra/eks
+
+      - name: Summarize cluster info
+        shell: bash
+        run: |
+          {
+            echo "## EKS Cluster Ready"
+            echo "- Cluster: $(terraform output -raw cluster_name)"
+            echo "- Region: ${AWS_REGION}"
+            echo "- State: s3://${TF_STATE_BUCKET}/${TF_STATE_KEY}"
+          } >> "$GITHUB_STEP_SUMMARY"
+        working-directory: infra/eks
