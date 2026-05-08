@@ -19,50 +19,43 @@ permissions:
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
-  PROJECT_NAME: ${{ vars.PROJECT_NAME || 'ecs-commerce-demo' }}
+  PROJECT_NAME: ${{ vars.PROJECT_NAME || 'eks-commerce' }}
   TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
-  TF_STATE_KEY: ${{ vars.TF_STATE_KEY || 'production/terraform.tfstate' }}
-  CLOUD_MAP_NAMESPACE: ${{ vars.CLOUD_MAP_NAMESPACE || 'commerce.local' }}
-  API_GATEWAY_STAGE: ${{ vars.API_GATEWAY_STAGE || 'prod' }}
+  TF_STATE_KEY: ${{ vars.EKS_TF_STATE_KEY || 'eks/terraform.tfstate' }}
   AWS_ROLE_TO_ASSUME: ${{ vars.AWS_ROLE_TO_ASSUME }}
+  CLUSTER_NAME: ${{ vars.CLUSTER_NAME || 'ecommerce-cluster' }}
   TF_IN_AUTOMATION: true
 
 concurrency:
-  group: ecs-commerce-demo-destroy
+  group: eks-commerce-destroy
   cancel-in-progress: false
 
 jobs:
   destroy:
-    name: Destroy Terraform-managed AWS resources
+    name: Destroy EKS and AWS resources
     runs-on: ubuntu-latest
     environment: production
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v4
         with:
-          terraform_version: 1.14.8
+          terraform_version: 1.10.0
+          terraform_wrapper: false
 
-      - name: Validate required GitHub configuration
+      - name: Validate required configuration
         shell: bash
         run: |
           set -euo pipefail
-
           if [[ -z "${TF_STATE_BUCKET}" ]]; then
-            echo "TF_STATE_BUCKET GitHub variable is required."
+            echo "TF_STATE_BUCKET is required."
             exit 1
           fi
-
           if [[ -z "${AWS_ROLE_TO_ASSUME}" ]]; then
-            echo "AWS_ROLE_TO_ASSUME GitHub variable is required."
-            exit 1
-          fi
-
-          if [[ -z "${{ secrets.TF_VAR_db_password }}" ]]; then
-            echo "TF_VAR_db_password GitHub secret is required."
+            echo "AWS_ROLE_TO_ASSUME is required."
             exit 1
           fi
 
@@ -70,153 +63,110 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           INPUT="${{ github.event.inputs.confirm_project_name }}"
-          
           if [[ "${INPUT}" != "${PROJECT_NAME}" ]]; then
-            echo "❌ Confirmation failed."
-            echo "Expected: ${PROJECT_NAME}"
-            echo "Received: ${INPUT}"
+            echo "Confirmation failed. Expected: ${PROJECT_NAME}, Received: ${INPUT}"
             exit 1
           fi
-          
-          echo "✅ Confirmation successful. Proceeding with destroy."
+          echo "Confirmation successful. Proceeding with destroy."
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v6
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
 
-      - name: Confirm Terraform state bucket exists
+      - name: Delete K8s resources
         shell: bash
         run: |
-          set -euo pipefail
-
-          if ! aws s3api head-bucket --bucket "${TF_STATE_BUCKET}" 2>/dev/null; then
-            echo "Terraform state bucket not found: ${TF_STATE_BUCKET}"
-            echo "Nothing to destroy from the remote backend."
-            exit 1
-          fi
+          aws eks update-kubeconfig \
+            --region "${AWS_REGION}" \
+            --name "${CLUSTER_NAME}" || true
+          kubectl delete namespace ecommerce --ignore-not-found=true || true
 
       - name: Render backend config for Terraform
         shell: bash
         run: |
-          set -euo pipefail
-
-          cat > infra/terraform/backend.hcl <<EOF
+          cat > infra/eks/backend.hcl <<EOF
           bucket       = "${TF_STATE_BUCKET}"
           key          = "${TF_STATE_KEY}"
           region       = "${AWS_REGION}"
           use_lockfile = true
           EOF
 
-      - name: Initialize Terraform with remote state
+      - name: Terraform init
         run: terraform init -input=false -backend-config=backend.hcl
-        working-directory: infra/terraform
+        working-directory: infra/eks
 
-      - name: Destroy the ECS demo stack
+      - name: Terraform destroy EKS
         run: |
-          terraform destroy -auto-approve \
-            -var "aws_region=${AWS_REGION}" \
-            -var "project_name=${PROJECT_NAME}" \
-            -var "db_password=${{ secrets.TF_VAR_db_password }}" \
-            -var "deploy_ecs_services=false" \
-            -var "cloud_map_namespace=${CLOUD_MAP_NAMESPACE}" \
-            -var "api_gateway_stage=${API_GATEWAY_STAGE}"
-        working-directory: infra/terraform
-
-      - name: Remove known ECR repositories for this demo project
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          services=(frontend gateway catalog cart order payment notification)
-
-          for service in "${services[@]}"; do
-            repository_name="${PROJECT_NAME}-${service}"
-
-            if aws ecr describe-repositories --region "${AWS_REGION}" --repository-names "${repository_name}" >/dev/null 2>&1; then
-              aws ecr delete-repository --region "${AWS_REGION}" --repository-name "${repository_name}" --force
-            fi
-          done
-
-      - name: Remove Terraform state objects from S3
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          aws s3 rm "s3://${TF_STATE_BUCKET}/${TF_STATE_KEY}" || true
-          aws s3 rm "s3://${TF_STATE_BUCKET}/${TF_STATE_KEY}.tflock" || true
-
-      - name: Optionally delete the Terraform backend bucket
-        if: github.event.inputs.destroy_backend_bucket == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          echo "🗑️ Starting bucket deletion process..."
-          echo "Bucket: ${TF_STATE_BUCKET}"
-          
-          # Remove all object versions (handles S3 versioning)
-          echo "Removing all object versions..."
-          aws s3api list-object-versions \
-            --bucket "${TF_STATE_BUCKET}" \
-            --query 'Versions[].{Key:Key,VersionId:VersionId}' \
-            --output json | jq -r '.[] | "\(.Key) \(.VersionId)"' | while read -r key version; do
-            echo "  Deleting: $key (version: $version)"
-            aws s3api delete-object --bucket "${TF_STATE_BUCKET}" --key "$key" --version-id "$version"
-          done
-          
-          # Remove all delete markers
-          echo "Removing delete markers..."
-          aws s3api list-object-versions \
-            --bucket "${TF_STATE_BUCKET}" \
-            --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' \
-            --output json | jq -r '.[] | "\(.Key) \(.VersionId)"' | while read -r key version; do
-            echo "  Deleting marker: $key (version: $version)"
-            aws s3api delete-object --bucket "${TF_STATE_BUCKET}" --key "$key" --version-id "$version"
-          done
-          
-          # Verify bucket is empty before deletion
-          OBJECT_COUNT=$(aws s3api list-objects-v2 --bucket "${TF_STATE_BUCKET}" --query 'Contents | length(@)' --output text 2>/dev/null || echo "0")
-          echo "Objects remaining in bucket: $OBJECT_COUNT"
-          
-          if [[ "$OBJECT_COUNT" -eq 0 ]]; then
-            echo "✅ Bucket is empty. Deleting bucket..."
-            aws s3api delete-bucket --bucket "${TF_STATE_BUCKET}"
-            echo "✅ Bucket deleted successfully!"
-          else
-            echo "⚠️  Bucket still contains objects. Skipping deletion."
-            exit 1
-          fi
-
-      - name: Delete EKS cluster via Terraform
-        shell: bash
-        run: |
-          cat > infra/eks/backend.hcl <<EOF
-          bucket       = "${TF_STATE_BUCKET}"
-          key          = "eks/terraform.tfstate"
-          region       = "${AWS_REGION}"
-          use_lockfile = true
-          EOF
-
-          cd infra/eks
-          terraform init -input=false -backend-config=backend.hcl
           terraform destroy -auto-approve \
             -var "aws_region=${AWS_REGION}" \
             -var "project_name=${PROJECT_NAME}" \
             -var "cluster_name=${CLUSTER_NAME}"
+        working-directory: infra/eks
+
+      - name: Delete ECR repositories
+        shell: bash
+        run: |
+          set -euo pipefail
+          services=(frontend gateway catalog cart order payment notification)
+          for service in "${services[@]}"; do
+            repository_name="${PROJECT_NAME}-${service}"
+            if aws ecr describe-repositories \
+              --region "${AWS_REGION}" \
+              --repository-names "${repository_name}" >/dev/null 2>&1; then
+              aws ecr delete-repository \
+                --region "${AWS_REGION}" \
+                --repository-name "${repository_name}" \
+                --force
+              echo "Deleted ECR repo: ${repository_name}"
+            fi
+          done
+
+      - name: Remove Terraform state from S3
+        shell: bash
+        run: |
+          aws s3 rm "s3://${TF_STATE_BUCKET}/${TF_STATE_KEY}" || true
+          aws s3 rm "s3://${TF_STATE_BUCKET}/${TF_STATE_KEY}.tflock" || true
+
+      - name: Optionally delete backend bucket
+        if: github.event.inputs.destroy_backend_bucket == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws s3api list-object-versions \
+            --bucket "${TF_STATE_BUCKET}" \
+            --query 'Versions[].{Key:Key,VersionId:VersionId}' \
+            --output json | jq -r '.[] | "\(.Key) \(.VersionId)"' | \
+          while read -r key version; do
+            aws s3api delete-object \
+              --bucket "${TF_STATE_BUCKET}" \
+              --key "$key" \
+              --version-id "$version"
+          done
+
+          aws s3api list-object-versions \
+            --bucket "${TF_STATE_BUCKET}" \
+            --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' \
+            --output json | jq -r '.[] | "\(.Key) \(.VersionId)"' | \
+          while read -r key version; do
+            aws s3api delete-object \
+              --bucket "${TF_STATE_BUCKET}" \
+              --key "$key" \
+              --version-id "$version"
+          done
+
+          aws s3api delete-bucket --bucket "${TF_STATE_BUCKET}"
+          echo "Bucket deleted."
 
       - name: Summarize destroy result
         shell: bash
         run: |
           {
-            echo "## ✅ Destroy Complete"
-            echo
-            echo "- **Project:** ${PROJECT_NAME}"
-            echo "- **Region:** ${AWS_REGION}"
-            echo "- **Backend Bucket Removed:** ${{ github.event.inputs.destroy_backend_bucket }}"
-            echo
-            echo "All Terraform-managed resources have been destroyed."
+            echo "## Destroy Complete"
+            echo "- Project: ${PROJECT_NAME}"
+            echo "- Cluster: ${CLUSTER_NAME}"
+            echo "- Region: ${AWS_REGION}"
+            echo "- Backend Bucket Removed: ${{ github.event.inputs.destroy_backend_bucket }}"
           } >> "$GITHUB_STEP_SUMMARY"
