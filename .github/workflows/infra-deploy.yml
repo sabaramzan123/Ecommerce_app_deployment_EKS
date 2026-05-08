@@ -94,6 +94,7 @@ jobs:
         working-directory: infra/eks
 
       - name: Terraform apply
+        timeout-minutes: 45      
         run: |
           terraform apply -auto-approve \
             -var "aws_region=${AWS_REGION}" \
