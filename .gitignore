@@ -13,4 +13,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 infra/terraform/backend.hcl
+infra/eks/backend.hcl
+infra/terraform/backend.hcl
+*.hcl
 

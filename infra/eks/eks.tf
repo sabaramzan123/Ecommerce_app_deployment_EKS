@@ -24,8 +24,7 @@ module "vpc" {
   }
 }
 
-# ─── EKS CLUSTER ───────────────────────────────────────────────────────────────
-
+# ─── EKS CLUSTER ─────
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.0"
