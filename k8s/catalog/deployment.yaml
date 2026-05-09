@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: catalog
-          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-catalog:e1d298e3c3f9
+          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-catalog:28c45b433c74
           ports:
             - containerPort: 3000
           env:
