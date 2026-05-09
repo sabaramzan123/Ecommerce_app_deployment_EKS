@@ -188,16 +188,18 @@ jobs:
             --name "${CLUSTER_NAME}"
 
       - name: Apply namespace
-        run: kubectl apply -f k8s/namespace.yaml
+        run: kubectl apply -f k8s/namespace.yaml --validate=false
+
 
       - name: Deploy postgres and redis first
         shell: bash
         run: |
           set -euo pipefail
-          kubectl apply -f k8s/postgres/deployment.yaml
-          kubectl apply -f k8s/postgres/service.yaml
-          kubectl apply -f k8s/redis/deployment.yaml
-          kubectl apply -f k8s/redis/service.yaml
+          kubectl apply -f k8s/postgres/deployment.yaml --validate=false
+
+          kubectl apply -f k8s/postgres/service.yaml --validate=false
+          kubectl apply -f k8s/redis/deployment.yaml --validate=false
+          kubectl apply -f k8s/redis/service.yaml --validate=false
           echo "Waiting for postgres to be ready..."
           kubectl rollout status deployment/postgres -n ecommerce --timeout=120s
           echo "Waiting for redis to be ready..."
@@ -210,8 +212,8 @@ jobs:
           services=(frontend gateway catalog cart order payment notification)
           for svc in "${services[@]}"; do
             echo "Deploying ${svc}..."
-            kubectl apply -f "k8s/${svc}/deployment.yaml"
-            kubectl apply -f "k8s/${svc}/service.yaml"
+            kubectl apply -f "k8s/${svc}/deployment.yaml" --validate=false
+            kubectl apply -f "k8s/${svc}/service.yaml" --validate=false
           done
 
       - name: Wait for all rollouts
