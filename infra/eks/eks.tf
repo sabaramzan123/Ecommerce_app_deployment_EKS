@@ -8,10 +8,10 @@ module "vpc" {
   azs            = ["${var.aws_region}a", "${var.aws_region}b"]
   public_subnets = ["10.0.101.0/24", "10.0.102.0/24"]
 
-  enable_nat_gateway   = false
-  enable_dns_hostnames = true
-
+  enable_nat_gateway      = false
+  enable_dns_hostnames    = true
   map_public_ip_on_launch = true
+
   public_subnet_tags = {
     "kubernetes.io/role/elb" = "1"
   }
@@ -29,25 +29,11 @@ module "eks" {
 
   cluster_endpoint_public_access = true
 
-  create_kms_key             = false
-  cluster_encryption_config  = {}
-  cluster_enabled_log_types  = []
+  create_kms_key            = false
+  cluster_encryption_config = {}
+  cluster_enabled_log_types = []
 
   enable_cluster_creator_admin_permissions = true
-
-  access_entries = {
-    github_actions = {
-      principal_arn = "arn:aws:iam::303713699681:role/ECS-deployment-role"
-      policy_associations = {
-        admin = {
-          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-          access_scope = {
-            type = "cluster"
-          }
-        }
-      }
-    }
-  }
 
   eks_managed_node_groups = {
     default = {
@@ -55,9 +41,7 @@ module "eks" {
       max_size       = 2
       desired_size   = 1
       instance_types = ["t3.medium"]
-
-      # Public subnets mein nodes
-      subnet_ids = module.vpc.public_subnets
+      subnet_ids     = module.vpc.public_subnets
     }
   }
 
