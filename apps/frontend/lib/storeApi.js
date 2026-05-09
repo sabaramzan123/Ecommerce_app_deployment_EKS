@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import getConfig from "next/config";
 
-const API_BASE_URL = process.env.API_BASE_URL || "http://gateway.ecommerce.svc.cluster.local";
+const { serverRuntimeConfig } = getConfig();
+const API_BASE_URL = serverRuntimeConfig?.API_BASE_URL || process.env.API_BASE_URL || "http://gateway.ecommerce.svc.cluster.local";
 
 async function buildResponse(response) {
   const contentType = response.headers.get("content-type") || "";
