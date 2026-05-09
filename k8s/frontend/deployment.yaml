@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-frontend:28c45b433c74
+          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-frontend:e5b2cb1ce5b9
           ports:
             - containerPort: 3000
           env:
