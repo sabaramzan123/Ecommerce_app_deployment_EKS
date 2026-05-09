@@ -187,21 +187,19 @@ jobs:
             --region "${AWS_REGION}" \
             --name "${CLUSTER_NAME}"
 
-      - name: Apply namespace
-        run: kubectl apply -f k8s/namespace.yaml 
-
       - name: Verify kubectl auth
         run: |
           kubectl cluster-info
           kubectl get nodes
 
+      - name: Apply namespace
+        run: kubectl apply -f k8s/namespace.yaml --validate=false
 
       - name: Deploy postgres and redis first
         shell: bash
         run: |
           set -euo pipefail
           kubectl apply -f k8s/postgres/deployment.yaml --validate=false
-
           kubectl apply -f k8s/postgres/service.yaml --validate=false
           kubectl apply -f k8s/redis/deployment.yaml --validate=false
           kubectl apply -f k8s/redis/service.yaml --validate=false
