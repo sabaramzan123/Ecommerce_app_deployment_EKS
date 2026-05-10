@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: payment
-          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-payment:78a7726fbdf1
+          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-payment:9e45939571c7
           ports:
             - containerPort: 3000
           env:
