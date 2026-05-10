@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: gateway
-          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-gateway:43fa8b558637
+          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-gateway:e9139746678f
           ports:
             - containerPort: 3000
           env:
