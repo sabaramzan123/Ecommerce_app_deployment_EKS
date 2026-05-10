@@ -204,15 +204,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          # Delete old StatefulSets if they exist (needed for volumeClaimTemplate changes)
+          kubectl delete statefulset postgres -n ecommerce --ignore-not-found=true
+          kubectl delete statefulset redis -n ecommerce --ignore-not-found=true
+
+          # Delete old PVCs so fresh ones get created with gp2 storageClass
+          kubectl delete pvc -n ecommerce -l app=postgres --ignore-not-found=true
+          kubectl delete pvc -n ecommerce -l app=redis --ignore-not-found=true
+
+          # Apply updated StatefulSets
           kubectl apply -f k8s/postgres/statefulset.yaml --validate=false
           kubectl apply -f k8s/postgres/service.yaml --validate=false
           kubectl apply -f k8s/redis/statefulset.yaml --validate=false
           kubectl apply -f k8s/redis/service.yaml --validate=false
+
           echo "Waiting for postgres..."
           kubectl rollout status statefulset/postgres -n ecommerce --timeout=180s
           echo "Waiting for redis..."
           kubectl rollout status statefulset/redis -n ecommerce --timeout=180s
-
+          
       - name: Install Nginx Ingress Controller
         shell: bash
         run: |
