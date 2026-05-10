@@ -21,3 +21,5 @@ spec:
           env:
             - name: API_BASE_URL
               value: "http://gateway.ecommerce.svc.cluster.local"
+            - name: NEXT_PUBLIC_GATEWAY_URL
+              value: "/api/gateway"
