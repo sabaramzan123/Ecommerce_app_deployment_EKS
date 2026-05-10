@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: notification
-          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-notification:9e45939571c7
+          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-notification:43517323cca8
           ports:
             - containerPort: 3000
           env:
