@@ -57,18 +57,6 @@ module "eks" {
     }
   }
 
-  access_entries = {
-    iam_user = {
-      principal_arn = "arn:aws:iam::303713699681:user/iam-user"
-      policy_associations = {
-        admin = {
-          policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-          access_scope = { type = "cluster" }
-        }
-      }
-    }
-  }
-
   eks_managed_node_groups = {
     default = {
       min_size       = 1
