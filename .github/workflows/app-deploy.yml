@@ -33,7 +33,6 @@ concurrency:
 
 jobs:
 
-  # ─── JOB 1: Build and push images to ECR ─────────────────────────────────────
   build-push:
     name: Build and Push Docker Images
     runs-on: ubuntu-latest
@@ -108,7 +107,6 @@ jobs:
             docker push "${image_uri}"
           done
 
-  # ─── JOB 2: Update k8s manifests with new image tag ──────────────────────────
   update-manifests:
     name: Update Image Tags in Manifests
     runs-on: ubuntu-latest
@@ -162,7 +160,6 @@ jobs:
           git commit -m "ci: update image tags to ${IMAGE_TAG} [skip ci]"
           git push
 
-  # ─── JOB 3: Deploy updated manifests to EKS ──────────────────────────────────
   deploy:
     name: Deploy to EKS
     runs-on: ubuntu-latest
@@ -212,15 +209,15 @@ jobs:
           kubectl apply -f k8s/redis/statefulset.yaml --validate=false
           kubectl apply -f k8s/redis/service.yaml --validate=false
           echo "Waiting for postgres..."
-          kubectl rollout status statefulset/postgres -n ecommerce --timeout=120s
+          kubectl rollout status statefulset/postgres -n ecommerce --timeout=180s
           echo "Waiting for redis..."
-          kubectl rollout status statefulset/redis -n ecommerce --timeout=120s
+          kubectl rollout status statefulset/redis -n ecommerce --timeout=180s
 
       - name: Install Nginx Ingress Controller
         shell: bash
         run: |
           kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.9.4/deploy/static/provider/aws/deploy.yaml --validate=false
-          echo "Waiting for ingress controller to be ready..."
+          echo "Waiting for ingress controller..."
           kubectl wait --namespace ingress-nginx \
             --for=condition=ready pod \
             --selector=app.kubernetes.io/component=controller \
