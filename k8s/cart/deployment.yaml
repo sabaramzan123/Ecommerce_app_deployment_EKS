@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: cart
-          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-cart:43517323cca8
+          image: 303713699681.dkr.ecr.us-east-1.amazonaws.com/eks-commerce-cart:a3c2895ae25e
           ports:
             - containerPort: 3000
           env:
