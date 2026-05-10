@@ -35,6 +35,8 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: DB_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata    # ← ye add karo
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
@@ -43,7 +45,7 @@ spec:
         name: postgres-data
       spec:
         accessModes: ["ReadWriteOnce"]
-        storageClassName: gp2  
+        storageClassName: gp2
         resources:
           requests:
             storage: 2Gi
