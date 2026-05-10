@@ -195,18 +195,36 @@ jobs:
       - name: Apply namespace
         run: kubectl apply -f k8s/namespace.yaml --validate=false
 
-      - name: Deploy postgres and redis first
+      - name: Apply ConfigMap and Secret
         shell: bash
         run: |
           set -euo pipefail
-          kubectl apply -f k8s/postgres/deployment.yaml --validate=false
+          kubectl apply -f k8s/config/configmap.yaml --validate=false
+          kubectl apply -f k8s/config/secret.yaml --validate=false
+          echo "ConfigMap and Secret applied."
+
+      - name: Deploy postgres and redis StatefulSets
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl apply -f k8s/postgres/statefulset.yaml --validate=false
           kubectl apply -f k8s/postgres/service.yaml --validate=false
-          kubectl apply -f k8s/redis/deployment.yaml --validate=false
+          kubectl apply -f k8s/redis/statefulset.yaml --validate=false
           kubectl apply -f k8s/redis/service.yaml --validate=false
-          echo "Waiting for postgres to be ready..."
-          kubectl rollout status deployment/postgres -n ecommerce --timeout=120s
-          echo "Waiting for redis to be ready..."
-          kubectl rollout status deployment/redis -n ecommerce --timeout=120s
+          echo "Waiting for postgres..."
+          kubectl rollout status statefulset/postgres -n ecommerce --timeout=120s
+          echo "Waiting for redis..."
+          kubectl rollout status statefulset/redis -n ecommerce --timeout=120s
+
+      - name: Install Nginx Ingress Controller
+        shell: bash
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.9.4/deploy/static/provider/aws/deploy.yaml --validate=false
+          echo "Waiting for ingress controller to be ready..."
+          kubectl wait --namespace ingress-nginx \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/component=controller \
+            --timeout=180s
 
       - name: Apply all service manifests
         shell: bash
@@ -219,6 +237,9 @@ jobs:
             kubectl apply -f "k8s/${svc}/service.yaml" --validate=false
           done
 
+      - name: Apply Ingress
+        run: kubectl apply -f k8s/ingress/ingress.yaml --validate=false
+
       - name: Wait for all rollouts
         shell: bash
         run: |
@@ -230,11 +251,11 @@ jobs:
               -n ecommerce --timeout=180s
           done
 
-      - name: Print frontend URL
+      - name: Get Ingress URL
         run: |
-          echo "Fetching LoadBalancer URL..."
-          sleep 20
-          kubectl get svc frontend -n ecommerce
+          echo "Waiting for Ingress LoadBalancer..."
+          sleep 30
+          kubectl get ingress ecommerce-ingress -n ecommerce
 
       - name: Summarize deployment
         shell: bash
@@ -247,5 +268,7 @@ jobs:
             echo "- Cluster: ${CLUSTER_NAME}"
             echo "- Namespace: ecommerce"
             echo "- Services: frontend, gateway, catalog, cart, order, payment, notification"
-            echo "- Databases: postgres, redis"
+            echo "- Databases: PostgreSQL StatefulSet + Redis StatefulSet"
+            echo "- Config: ConfigMap + Secret"
+            echo "- Ingress: Nginx Ingress Controller"
           } >> "$GITHUB_STEP_SUMMARY"

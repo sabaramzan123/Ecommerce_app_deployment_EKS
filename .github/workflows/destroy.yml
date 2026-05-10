@@ -169,4 +169,4 @@ jobs:
             echo "- Cluster: ${CLUSTER_NAME}"
             echo "- Region: ${AWS_REGION}"
             echo "- Backend Bucket Removed: ${{ github.event.inputs.destroy_backend_bucket }}"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } >> "$GITHUB_STEP_SUMMARY"/
