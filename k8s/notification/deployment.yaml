@@ -1,13 +1,9 @@
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: ecommerce-ingress
+  name: notification
   namespace: ecommerce
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-    nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
-<<<<<<< HEAD
   replicas: 1
   selector:
     matchLabels:
@@ -29,23 +25,3 @@ spec:
               value: "postgres://postgres:postgres@postgres.ecommerce.svc.cluster.local:5432/commerce"
             - name: DB_SCHEMA
               value: "notification"
-=======
-  ingressClassName: nginx
-  rules:
-    - http:
-        paths:
-          - path: /api/store(/|$)(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: frontend
-                port:
-                  number: 80
-          - path: /()(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: frontend
-                port:
-                  number: 80
->>>>>>> 8cfff97 (ingress updated)
