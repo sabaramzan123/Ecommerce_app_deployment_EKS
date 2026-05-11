@@ -11,13 +11,48 @@ spec:
   rules:
     - http:
         paths:
-          - path: /api/store(/|$)(.*)
+          - path: /api/gateway(/|$)(.*)
             pathType: ImplementationSpecific
             backend:
               service:
-                name: frontend
+                name: gateway
                 port:
-                  number: 80
+                  number: 3000
+          - path: /api/catalog(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: catalog
+                port:
+                  number: 3000
+          - path: /api/cart(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: cart
+                port:
+                  number: 3000
+          - path: /api/order(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: order
+                port:
+                  number: 3000
+          - path: /api/payment(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: payment
+                port:
+                  number: 3000
+          - path: /api/notification(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: notification
+                port:
+                  number: 3000
           - path: /()(.*)
             pathType: ImplementationSpecific
             backend:
